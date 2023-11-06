@@ -5,7 +5,6 @@ import CTkToolTip
 import Lythrum_extensions
 import functools
 import threading
-import random
 import time
 import subprocess
 import concurrent.futures
@@ -106,7 +105,7 @@ def shortest_job_first(process):
     return sorted(process, key = lambda process : process.file_size)
 
 def delete_file(process):
-    if(process.file_status in {'พร้อม', 'เสร็จสิ้น', 'ผิดพลาด'}):
+    if(process.file_status in {'พร้อม', 'ผิดพลาด'}) or 'เสร็จสิ้น' in process.file_status:
         process.process_frame.destroy()
         if process in list_process:
             list_process.remove(process)
@@ -186,7 +185,7 @@ def browse_files_source():
                 process.set_combobox_choose_format(combobox_choose_format)
                 process.set_btn_delete_file_widget(btn_delete_file_widget)
                 btn_show_unsuccess.configure(text= f'จำนวนไฟล์: {len(list_process)}')
-        btn_choose_files.configure(text='นำเข้า', state='normal')
+    btn_choose_files.configure(text='นำเข้า', state='normal')
         
 def browse_folder_destination():
     btn_choose_folder.configure(text='กำลังเลือกปลายทาง...', state='disabled')
@@ -224,7 +223,7 @@ def choose_format_all():
     else:
         choose_format_all_window.focus()
 
-def auto_select_gpu(ffmpeg, process, video_codec='libx264', audio_codec='libmp3lame', gpu=0):
+def auto_select_gpu(ffmpeg, process, video_codec='libx264', audio_codec='libmp3lame', gpu=0, start_time = time.time()):
     file_destination = os.path.join(process.folder_destination, f'{process.file_name}{process.destination_extension}').replace('\\','/')
     if os.path.isfile(file_destination):
         os.remove(file_destination)
@@ -255,8 +254,8 @@ def auto_select_gpu(ffmpeg, process, video_codec='libx264', audio_codec='libmp3l
     if gpu > 2:
         try:
             subprocess.run(ffmpeg_cmd.replace('\\','/'), shell=True, check=True)
-            process.set_file_status('เสร็จสิ้น')
-            process.display_file_status_widget.configure(text='เสร็จสิ้น')
+            process.set_file_status(f'เสร็จสิ้นใน {time.time() - start_time:.2f} วินาที')
+            process.display_file_status_widget.configure(text=f'เสร็จสิ้นใน {time.time() - start_time:.2f} วินาที')
             return process
         except:
             if os.path.isfile(file_destination):
@@ -267,11 +266,11 @@ def auto_select_gpu(ffmpeg, process, video_codec='libx264', audio_codec='libmp3l
     else:
         try:
             subprocess.run(ffmpeg_cmd.replace('\\','/'), shell=True, check=True)
-            process.set_file_status('เสร็จสิ้น')
-            process.display_file_status_widget.configure(text='เสร็จสิ้น')
+            process.set_file_status(f'เสร็จสิ้นใน {time.time() - start_time:.2f} วินาที')
+            process.display_file_status_widget.configure(text=f'เสร็จสิ้นใน {time.time() - start_time:.2f} วินาที')
             return process
         except:
-            return auto_select_gpu(ffmpeg, process, gpu=gpu+1)
+            return auto_select_gpu(ffmpeg, process, gpu=gpu+1, start_time=start_time)
 
 def convert_file(process):
     process.display_file_status_widget.configure(text='ดำเนินการ...')
